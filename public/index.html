@@ -3,47 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SL Live Monitor</title>
+    <title>Painel Seguro SL</title>
     <style>
-        body { background-color: #0d0d0d; color: #00ff41; font-family: 'Courier New', monospace; padding: 20px; }
-        h1 { border-bottom: 1px solid #333; padding-bottom: 10px; }
-        #logs { margin-top: 20px; }
-        .entry { 
-            border-bottom: 1px solid #222; 
-            padding: 5px 0; 
-            animation: flash 1s; 
-            white-space: pre-wrap; 
+        body { background-color: #111; color: #ddd; font-family: sans-serif; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        /* Mensagem de Erro (sem link) */
+        #error-screen { display: none; text-align: center; margin-top: 50px; color: #ff4444; }
+        
+        /* Tela Principal */
+        #log-screen { display: none; width: 100%; max-width: 800px; }
+        .header { 
+            display: flex; 
+            justify-content: space-between; 
+            border-bottom: 1px solid #333; 
+            padding-bottom: 10px; 
+            margin-bottom: 10px; 
+            font-size: 14px;
+            color: #888;
         }
-        @keyframes flash { from { background-color: #222; } to { background-color: transparent; } }
+        .status-ok { color: #00ff41; font-weight: bold; }
+        
+        .entry { 
+            background: #000; 
+            border-left: 3px solid #00ff41; 
+            padding: 10px; 
+            margin-bottom: 5px; 
+            font-family: 'Courier New', monospace; 
+            white-space: pre-wrap; 
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <h1>🔴 Live UUID Receiver</h1>
-    <div id="status">Aguardando conexão...</div>
-    <div id="logs"></div>
+
+    <div id="error-screen">
+        <h1>⚠️ Acesso Negado</h1>
+        <p>Você precisa abrir este site clicando no link fornecido pelo HUD no Second Life.</p>
+        <p>O link deve conter sua identificação segura.</p>
+    </div>
+
+    <div id="log-screen">
+        <div class="header">
+            <span>📡 Conexão Estabelecida</span>
+            <span class="status-ok">🔒 Canal Seguro Ativo</span>
+        </div>
+        <div style="font-size: 12px; color: #555; margin-bottom: 10px;">ID: <span id="display-uuid"></span></div>
+        <div id="logs"></div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
-        const logDiv = document.getElementById('logs');
-        const statusDiv = document.getElementById('status');
+        const logsDiv = document.getElementById('logs');
+        
+        // 1. Pega o UUID da URL (Ex: site.com/?id=uuid-aqui)
+        const params = new URLSearchParams(window.location.search);
+        const myUUID = params.get('id');
 
-        socket.on('connect', () => {
-            statusDiv.innerText = "✓ Conectado ao servidor";
-            statusDiv.style.color = "#00ff41";
-        });
+        // 2. Verifica se o UUID existe
+        if (!myUUID) {
+            document.getElementById('error-screen').style.display = 'block';
+        } else {
+            document.getElementById('log-screen').style.display = 'block';
+            document.getElementById('display-uuid').textContent = myUUID;
+        }
 
         socket.on('new-log', (msg) => {
+            // 3. FILTRO DE SEGURANÇA
+            // Se eu não tenho UUID, ou se o dado não tem UUID, ou se forem diferentes...
+            if (!myUUID || !msg.uuid || msg.uuid !== myUUID) {
+                return; // Ignora totalmente a mensagem
+            }
+
             const div = document.createElement('div');
             div.className = 'entry';
             
-            // Aqui pegamos apenas o texto, sem adicionar hora/data
+            // Mostra o texto limpo
             const content = msg.text ? msg.text : JSON.stringify(msg);
-            
             div.textContent = content;
             
-            // Adiciona no topo da lista
-            logDiv.prepend(div);
+            logsDiv.prepend(div);
         });
     </script>
 </body>
