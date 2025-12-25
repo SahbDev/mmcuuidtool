@@ -207,7 +207,7 @@
         <div id="editor-panel">
             <div class="editor-row">
                 <div class="editor-group">
-                    <label>Hud Button Name</label>
+                    <label>Hud Button Name (Suffix)</label>
                     <input type="text" id="edit-num-suffix" placeholder="e.g. ' B' (space B)">
                 </div>
                 <div class="editor-group">
@@ -288,7 +288,7 @@
             });
         }
 
-        // --- FUNÇÕES DE EDIÇÃO INTELIGENTE ---
+        // --- FUNÇÕES DE EDIÇÃO (CORRIGIDO) ---
 
         function toggleEditor() {
             const panel = document.getElementById('editor-panel');
@@ -307,32 +307,38 @@
             const entries = document.querySelectorAll('.entry');
 
             entries.forEach(entry => {
-                let text = entry.textContent;
-                // Regex: Pega o que está dentro das aspas
-                const regex = /^"(.+?)\|(.+?)\|(.+?)\|(.+?)",$/;
-                const match = text.match(regex);
+                let text = entry.textContent.trim(); // Remove espaços extras
 
-                if (match) {
-                    let partNum = match[1];   
-                    let partWord1 = match[2]; 
-                    let partUUID = match[3];  
-                    let partWord2 = match[4]; 
+                // MÉTODO NOVO: SPLIT
+                // Vamos quebrar a linha usando o caractere |
+                // Isso funciona melhor que Regex quando o formato varia um pouco
+                
+                // Remove aspas iniciais/finais e virgula final se existirem
+                text = text.replace(/^"|"$/g, '').replace(/,$/, ''); 
+                
+                let parts = text.split('|');
 
+                // Precisamos ter pelo menos 4 partes (Numero, Palavra1, UUID, Palavra2)
+                if (parts.length >= 4) {
+                    
                     // APLICA AS MUDANÇAS
                     if (suffix) {
-                        partNum = partNum + suffix; 
+                        parts[0] = parts[0] + suffix; // Adiciona ao numero
                     }
                     if (newWord1) {
-                        partWord1 = newWord1;
+                        parts[1] = newWord1; // Troca palavra 1
                     }
                     if (newWord2) {
-                        partWord2 = newWord2;
+                        parts[3] = newWord2; // Troca palavra 2 (índice 3 porque 0,1,2,3)
                     }
 
                     // RECONSTRÓI A LINHA
-                    const newLine = `"${partNum}|${partWord1}|${partUUID}|${partWord2}",`;
+                    // Junta tudo com | e coloca aspas e virgula de volta
+                    const newLine = `"${parts.join('|')}",`;
+                    
                     entry.textContent = newLine;
                     
+                    // Pisca em azul para mostrar que mudou
                     entry.style.color = "#00d9ff";
                     setTimeout(() => { entry.style.color = "#ccc"; }, 500);
                 }
