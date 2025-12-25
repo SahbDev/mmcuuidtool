@@ -6,13 +6,41 @@
     <title>UUID Secure Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* (CSS MANTIDO IGUAL AO ANTERIOR - SEM MUDANÇAS VISUAIS DRÁSTICAS) */
         :root {
             --bg-color: #0a0a0a; --panel-bg: #111111; --text-color: #e0e0e0;
             --accent-color: #00ff9d; --edit-color: #00d9ff; --error-color: #ff4b4b;
             --border-color: #333; --dim-text: #666;
         }
         body { background-color: var(--bg-color); color: var(--text-color); font-family: 'JetBrains Mono', monospace; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; height: 100vh; box-sizing: border-box; }
+        
+        /* LOGIN SCREEN OVERLAY */
+        #login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 10, 10, 0.98); z-index: 2000;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+        }
+        .login-box {
+            background: #161616; border: 1px solid var(--accent-color);
+            padding: 40px; border-radius: 10px; text-align: center;
+            box-shadow: 0 0 20px rgba(0, 255, 157, 0.1);
+        }
+        .login-title { font-size: 1.2rem; margin-bottom: 20px; color: #fff; letter-spacing: 2px; }
+        .login-input {
+            background: #000; border: 1px solid #333; color: var(--accent-color);
+            padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 1.5rem;
+            text-align: center; width: 150px; letter-spacing: 5px; text-transform: uppercase;
+            margin-bottom: 20px; border-radius: 5px; outline: none;
+        }
+        .login-input:focus { border-color: var(--accent-color); }
+        .login-btn {
+            background: var(--accent-color); color: #000; border: none;
+            padding: 10px 30px; font-weight: bold; font-family: 'JetBrains Mono', monospace;
+            cursor: pointer; border-radius: 5px; font-size: 1rem;
+        }
+        .login-btn:hover { background: #fff; }
+        #login-error { color: var(--error-color); margin-top: 15px; font-size: 0.8rem; display: none; }
+
+        /* UI ELEMENTS */
         .status-bar { width: 100%; max-width: 900px; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
         .user-info { display: flex; align-items: center; gap: 15px; }
         .avatar-img { width: 44px; height: 44px; border-radius: 50%; background-color: #0a0a0a; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
@@ -22,6 +50,7 @@
         .dot { height: 8px; width: 8px; background-color: #555; border-radius: 50%; display: inline-block; }
         .active .dot { background-color: var(--accent-color); box-shadow: 0 0 8px var(--accent-color); }
         .active { color: var(--accent-color); }
+        
         .container { width: 100%; max-width: 900px; flex-grow: 1; display: flex; flex-direction: column; background: var(--panel-bg); border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; position: relative; }
         .logs-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); background: #161616; display: flex; justify-content: space-between; align-items: center; }
         .header-title { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; color: #888; font-weight: bold; }
@@ -31,6 +60,7 @@
         .copy-btn:hover { background-color: var(--accent-color); color: #000; }
         .edit-btn { color: var(--edit-color); border: 1px solid var(--edit-color); }
         .edit-btn:hover { background-color: var(--edit-color); color: #000; }
+        
         #editor-panel { display: none; background: #1a1a1a; border-bottom: 1px solid var(--border-color); padding: 15px 20px; animation: slideDown 0.3s ease-out; }
         @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .editor-row { display: flex; gap: 15px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -40,6 +70,7 @@
         .editor-actions { display: flex; justify-content: flex-end; gap: 10px; }
         .apply-btn { background: var(--edit-color); color: #000; border: none; padding: 8px 20px; font-weight: bold; cursor: pointer; border-radius: 4px; }
         .cancel-btn { background: #333; color: #fff; border: none; padding: 8px 20px; cursor: pointer; border-radius: 4px; }
+        
         #logs { flex-grow: 1; overflow-y: auto; padding: 20px; scroll-behavior: smooth; display: block; }
         .entry { padding: 8px 12px; border-left: 2px solid var(--border-color); margin-bottom: 6px; background: rgba(255, 255, 255, 0.02); font-size: 0.85rem; white-space: pre-wrap; transition: all 0.2s; color: #ccc; }
         .entry:hover { border-left-color: var(--accent-color); background: rgba(0, 255, 157, 0.05); color: #fff; }
@@ -48,16 +79,24 @@
         #error-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.98); z-index: 999; justify-content: center; align-items: center; flex-direction: column; text-align: center; }
         .error-box { border: 1px solid var(--error-color); padding: 40px; border-radius: 10px; background: #1a0000; color: var(--error-color); max-width: 500px; }
         h1 { margin-top: 0; font-size: 1.5rem; }
-        #error-message { color: #aaa; margin-top: 10px; font-size: 0.9rem; }
     </style>
 </head>
 <body>
 
+    <div id="login-screen">
+        <div class="login-box">
+            <div class="login-title">SECURE ACCESS</div>
+            <input type="text" id="passcode" class="login-input" placeholder="CODE" maxlength="5">
+            <br>
+            <button class="login-btn" onclick="tryLogin()">UNLOCK</button>
+            <div id="login-error">Invalid Code</div>
+        </div>
+    </div>
+
     <div id="error-screen">
         <div class="error-box">
-            <h1>⚠️ ACCESS DENIED</h1>
-            <p id="error-title">Missing Credentials</p>
-            <p id="error-message">Please open this page using the link provided in Second Life.</p>
+            <h1>⚠️ LINK ERROR</h1>
+            <p>Missing UUID. Please get a new link in Second Life.</p>
         </div>
     </div>
 
@@ -70,7 +109,7 @@
             </div>
         </div>
         <div class="status-indicator" id="connection-status">
-            <span class="dot"></span> <span id="status-text">DISCONNECTED</span>
+            <span class="dot"></span> <span id="status-text">LOCKED</span>
         </div>
     </div>
 
@@ -106,49 +145,41 @@
         const params = new URLSearchParams(window.location.search);
         const myUUID = params.get('id');
         const myName = params.get('name');
-        const myKey = params.get('key'); 
 
-        // === GERADOR DE IDENTIDADE DE DISPOSITIVO ===
-        // Isso cria uma "digital" única para este navegador e salva.
-        let deviceId = localStorage.getItem('mmc_device_id');
-        if (!deviceId) {
-            deviceId = Math.random().toString(36).substring(2) + Date.now().toString(36);
-            localStorage.setItem('mmc_device_id', deviceId);
-        }
-
-        if (!myUUID || !myKey) {
-            showError("Invalid Link", "Please generate a new link in Second Life.");
+        if (!myUUID) {
+            document.getElementById('error-screen').style.display = 'flex';
         } else {
             document.getElementById('display-name').textContent = myName || myUUID;
             document.getElementById('avatar-img').src = `/api/avatar/${myUUID}`;
-            
-            // TENTA AUTENTICAR O DISPOSITIVO
-            socket.emit('auth_device', { uuid: myUUID, key: myKey, deviceId: deviceId });
         }
 
-        socket.on('connect', () => {
-            // Conectado ao servidor, mas ainda não autenticado
-        });
+        // --- LÓGICA DE LOGIN ---
 
-        // --- RESPOSTAS DE SEGURANÇA ---
-        
-        socket.on('auth_success', () => {
-            // Sucesso! Esconde erro, mostra conectado
-            document.getElementById('error-screen').style.display = 'none';
+        function tryLogin() {
+            const code = document.getElementById('passcode').value.toUpperCase();
+            if(!code) return;
+            socket.emit('login_attempt', { uuid: myUUID, code: code });
+        }
+
+        socket.on('login_success', () => {
+            // Esconde tela de login
+            document.getElementById('login-screen').style.display = 'none';
             statusDiv.classList.add('active');
-            statusText.textContent = "SECURE CONNECTION ACTIVE";
+            statusText.textContent = "CONNECTED";
         });
 
-        socket.on('auth_failed', (reason) => {
-            // Falha! Bloqueia a tela totalmente
-            statusDiv.classList.remove('active');
-            statusText.textContent = "ACCESS DENIED";
-            showError("SECURITY LOCKOUT", reason || "This link is being used on another device.");
+        socket.on('login_failed', () => {
+            const err = document.getElementById('login-error');
+            err.style.display = 'block';
+            err.textContent = "WRONG CODE";
+            // Treme o input (visual)
+            const input = document.getElementById('passcode');
+            input.style.borderColor = "#ff4b4b";
+            setTimeout(() => input.style.borderColor = "#333", 500);
         });
-
-        socket.on('disconnect', () => {
-            statusDiv.classList.remove('active');
-            statusText.textContent = "DISCONNECTED";
+        
+        socket.on('force_logout', () => {
+             location.reload(); // Recarrega para pedir senha nova se gerar outro link
         });
 
         socket.on('new-log', (msg) => {
@@ -164,50 +195,25 @@
             });
         });
 
-        function showError(title, msg) {
-            document.getElementById('error-screen').style.display = 'flex';
-            document.getElementById('error-title').textContent = title;
-            document.getElementById('error-message').textContent = msg;
-        }
-
-        // --- (Funções de Copy/Edit mantidas iguais) ---
+        // Funções de Copy/Edit (iguais)
         function copyData() {
             let textToCopy = "";
             document.querySelectorAll('.entry').forEach(entry => { textToCopy += entry.textContent + "\n"; });
             if(!textToCopy) return alert("No data to copy!");
             navigator.clipboard.writeText(textToCopy).then(() => {
-                const btn = document.querySelector('.copy-btn');
-                const originalText = btn.textContent;
-                btn.textContent = "COPIED!";
-                btn.style.backgroundColor = "#00ff9d"; btn.style.color = "black";
+                const btn = document.querySelector('.copy-btn'); const originalText = btn.textContent;
+                btn.textContent = "COPIED!"; btn.style.backgroundColor = "#00ff9d"; btn.style.color = "black";
                 setTimeout(() => { btn.textContent = originalText; btn.style.backgroundColor = "transparent"; btn.style.color = "#00ff9d"; }, 2000);
             });
         }
-        function toggleEditor() {
-            const panel = document.getElementById('editor-panel');
-            panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
-        }
+        function toggleEditor() { const p = document.getElementById('editor-panel'); p.style.display = (p.style.display === 'block') ? 'none' : 'block'; }
         function applyChanges() {
-            const suffix = document.getElementById('edit-num-suffix').value;
-            const newWord1 = document.getElementById('edit-word1').value;
-            const newWord2 = document.getElementById('edit-word2').value;
-            document.querySelectorAll('.entry').forEach(entry => {
-                let text = entry.textContent.trim();
-                text = text.replace(/^"|"$/g, '').replace(/,$/, ''); 
-                let parts = text.split('|');
-                if (parts.length >= 4) {
-                    if (suffix) parts[0] = parts[0] + suffix;
-                    if (newWord1) parts[1] = newWord1;
-                    if (newWord2) parts[3] = newWord2;
-                    entry.textContent = `"${parts.join('|')}",`;
-                    entry.style.color = "#00d9ff";
-                    setTimeout(() => { entry.style.color = "#ccc"; }, 500);
-                }
+            const s = document.getElementById('edit-num-suffix').value; const w1 = document.getElementById('edit-word1').value; const w2 = document.getElementById('edit-word2').value;
+            document.querySelectorAll('.entry').forEach(e => {
+                let t = e.textContent.trim().replace(/^"|"$/g, '').replace(/,$/, ''); let p = t.split('|');
+                if (p.length >= 4) { if(s) p[0]+=s; if(w1) p[1]=w1; if(w2) p[3]=w2; e.textContent = `"${p.join('|')}",`; e.style.color = "#00d9ff"; setTimeout(()=>e.style.color="#ccc",500); }
             });
-            toggleEditor();
-            document.getElementById('edit-num-suffix').value = '';
-            document.getElementById('edit-word1').value = '';
-            document.getElementById('edit-word2').value = '';
+            toggleEditor(); document.getElementById('edit-num-suffix').value=''; document.getElementById('edit-word1').value=''; document.getElementById('edit-word2').value='';
         }
     </script>
 </body>
