@@ -261,11 +261,23 @@
                 logsDiv.innerHTML = '';
                 return;
             }
-            const div = document.createElement('div');
-            div.className = 'entry';
-            const content = msg.text ? msg.text : JSON.stringify(msg);
-            div.textContent = content;
-            logsDiv.appendChild(div);
+
+            // --- CORREÇÃO DO BUG DE EDIÇÃO ---
+            // O servidor manda um bloco de texto com varias linhas (separadas por \n).
+            // Antes estavamos colocando tudo num div so, o que quebrava o editor.
+            // AGORA: Vamos separar linha por linha.
+            
+            const rawText = msg.text ? msg.text : JSON.stringify(msg);
+            const lines = rawText.split('\n'); // Quebra o bloco em linhas
+
+            lines.forEach(line => {
+                if (!line.trim()) return; // Ignora linhas vazias
+
+                const div = document.createElement('div');
+                div.className = 'entry';
+                div.textContent = line;
+                logsDiv.appendChild(div);
+            });
         });
 
         function copyData() {
@@ -288,15 +300,9 @@
             });
         }
 
-        // --- FUNÇÕES DE EDIÇÃO (CORRIGIDO) ---
-
         function toggleEditor() {
             const panel = document.getElementById('editor-panel');
-            if (panel.style.display === 'block') {
-                panel.style.display = 'none';
-            } else {
-                panel.style.display = 'block';
-            }
+            panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
         }
 
         function applyChanges() {
@@ -307,44 +313,30 @@
             const entries = document.querySelectorAll('.entry');
 
             entries.forEach(entry => {
-                let text = entry.textContent.trim(); // Remove espaços extras
-
-                // MÉTODO NOVO: SPLIT
-                // Vamos quebrar a linha usando o caractere |
-                // Isso funciona melhor que Regex quando o formato varia um pouco
+                let text = entry.textContent.trim();
                 
-                // Remove aspas iniciais/finais e virgula final se existirem
+                // Limpeza para edição: tira aspas e virgulas das pontas
                 text = text.replace(/^"|"$/g, '').replace(/,$/, ''); 
                 
+                // Divide por barra |
                 let parts = text.split('|');
 
-                // Precisamos ter pelo menos 4 partes (Numero, Palavra1, UUID, Palavra2)
+                // Garante que é uma linha válida com 4 partes
                 if (parts.length >= 4) {
-                    
-                    // APLICA AS MUDANÇAS
-                    if (suffix) {
-                        parts[0] = parts[0] + suffix; // Adiciona ao numero
-                    }
-                    if (newWord1) {
-                        parts[1] = newWord1; // Troca palavra 1
-                    }
-                    if (newWord2) {
-                        parts[3] = newWord2; // Troca palavra 2 (índice 3 porque 0,1,2,3)
-                    }
+                    if (suffix) parts[0] = parts[0] + suffix;
+                    if (newWord1) parts[1] = newWord1;
+                    if (newWord2) parts[3] = newWord2;
 
-                    // RECONSTRÓI A LINHA
-                    // Junta tudo com | e coloca aspas e virgula de volta
+                    // Remonta a linha
                     const newLine = `"${parts.join('|')}",`;
-                    
                     entry.textContent = newLine;
                     
-                    // Pisca em azul para mostrar que mudou
+                    // Efeito visual
                     entry.style.color = "#00d9ff";
                     setTimeout(() => { entry.style.color = "#ccc"; }, 500);
                 }
             });
 
-            // Fecha o editor e limpa os campos
             toggleEditor();
             document.getElementById('edit-num-suffix').value = '';
             document.getElementById('edit-word1').value = '';
