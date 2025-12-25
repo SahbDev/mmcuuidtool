@@ -127,7 +127,7 @@
 
         .editor-row { display: flex; gap: 15px; margin-bottom: 10px; flex-wrap: wrap; }
         .editor-group { display: flex; flex-direction: column; gap: 5px; flex: 1; }
-        .editor-group label { font-size: 0.7rem; color: #888; text-transform: uppercase; }
+        .editor-group label { font-size: 0.7rem; color: #888; text-transform: uppercase; font-weight: bold; }
         .editor-group input { 
             background: #000; border: 1px solid #333; color: #fff; 
             padding: 8px; font-family: 'JetBrains Mono', monospace; border-radius: 4px; 
@@ -207,16 +207,16 @@
         <div id="editor-panel">
             <div class="editor-row">
                 <div class="editor-group">
-                    <label>Add to Number (Suffix)</label>
+                    <label>Hud Button Name</label>
                     <input type="text" id="edit-num-suffix" placeholder="e.g. ' B' (space B)">
                 </div>
                 <div class="editor-group">
-                    <label>Replace Word 1 (DRESS)</label>
-                    <input type="text" id="edit-word1" placeholder="New Word 1">
+                    <label>Mesh Name</label>
+                    <input type="text" id="edit-word1" placeholder="New Mesh Name">
                 </div>
                 <div class="editor-group">
-                    <label>Replace Word 2 (ALL)</label>
-                    <input type="text" id="edit-word2" placeholder="New Word 2">
+                    <label>FACES</label>
+                    <input type="text" id="edit-word2" placeholder="New Faces">
                 </div>
             </div>
             <div class="editor-actions">
@@ -308,24 +308,19 @@
 
             entries.forEach(entry => {
                 let text = entry.textContent;
-
-                // Vamos desmontar a linha para editar
-                // Formato esperado: "NUMERO|PALAVRA1|UUID|PALAVRA2",
-                
-                // 1. Remove as aspas e virgula do final para editar limpo
                 // Regex: Pega o que está dentro das aspas
                 const regex = /^"(.+?)\|(.+?)\|(.+?)\|(.+?)",$/;
                 const match = text.match(regex);
 
                 if (match) {
-                    let partNum = match[1];   // Ex: 1
-                    let partWord1 = match[2]; // Ex: DRESS
-                    let partUUID = match[3];  // Ex: uuid...
-                    let partWord2 = match[4]; // Ex: ALL
+                    let partNum = match[1];   
+                    let partWord1 = match[2]; 
+                    let partUUID = match[3];  
+                    let partWord2 = match[4]; 
 
                     // APLICA AS MUDANÇAS
                     if (suffix) {
-                        partNum = partNum + suffix; // Adiciona o B (ex: 1 virar 1 B)
+                        partNum = partNum + suffix; 
                     }
                     if (newWord1) {
                         partWord1 = newWord1;
@@ -338,7 +333,6 @@
                     const newLine = `"${partNum}|${partWord1}|${partUUID}|${partWord2}",`;
                     entry.textContent = newLine;
                     
-                    // Pisca em azul para mostrar que mudou
                     entry.style.color = "#00d9ff";
                     setTimeout(() => { entry.style.color = "#ccc"; }, 500);
                 }
