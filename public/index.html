@@ -109,8 +109,8 @@
             overflow-y: auto;
             padding: 20px;
             scroll-behavior: smooth;
-            display: flex;
-            flex-direction: column-reverse; /* Novas mensagens em baixo ou controlar via JS */
+            /* CORREÇÃO: Removemos o flex reverse que jogava tudo para baixo */
+            display: block; 
         }
 
         /* Log Entries */
@@ -210,8 +210,7 @@
             // Security Filter
             if (!myUUID || !msg.uuid || msg.uuid !== myUUID) return;
 
-            // :: LÓGICA DE LIMPEZA ::
-            // Se o script mandar uma mensagem com action="clear", limpamos a tela
+            // Clear Screen Action
             if (msg.action === 'clear') {
                 logsDiv.innerHTML = '';
                 return;
@@ -224,14 +223,13 @@
             const content = msg.text ? msg.text : JSON.stringify(msg);
             div.textContent = content;
             
-            // Adiciona em baixo (append) para manter a ordem correta de leitura
+            // Append child coloca no final, como a lista começa no topo, vai descendo.
             logsDiv.appendChild(div);
         });
 
         // 5. Copy Function
         function copyData() {
             let textToCopy = "";
-            // Pega todos os textos das divs .entry
             const entries = document.querySelectorAll('.entry');
             entries.forEach(entry => {
                 textToCopy += entry.textContent + "\n";
