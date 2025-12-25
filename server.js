@@ -10,77 +10,68 @@ const io = new Server(server);
 app.use(express.json());
 app.use(express.static('public'));
 
-// MEMÓRIA DE SEGURANÇA
-// Guarda quem é o "dono" atual de cada UUID
-// Formato: { 'uuid-do-avatar': { key: 'senha-do-link', deviceId: 'id-do-computador' } }
-let sessionLocks = {};
+// ARMAZENA OS CÓDIGOS DE ACESSO DOS AVATARES
+// Formato: { 'uuid-do-avatar': 'CODIGO-A7X29' }
+let accessCodes = {};
 
 app.post('/api/log', (req, res) => {
     const data = req.body;
-    // O script LSL manda os dados para a sala "uuid"
-    // Só quem passou na autenticação abaixo estará nessa sala
+
+    // AÇÃO 1: REGISTRAR NOVO CÓDIGO (Vem do LSL quando clica OPEN LINK)
+    if (data.action === 'register_code') {
+        accessCodes[data.uuid] = data.code;
+        console.log(`Novo código registrado para ${data.uuid}: ${data.code}`);
+        // Se alguém já estiver conectado, derruba para pedir senha nova
+        io.to(data.uuid).emit('force_logout'); 
+        res.status(200).send('Code Registered');
+        return;
+    }
+
+    // AÇÃO 2: LIMPAR TELA
+    if (data.action === 'clear') {
+        io.to(data.uuid).emit('new-log', { action: 'clear' });
+        res.status(200).send('Cleared');
+        return;
+    }
+
+    // AÇÃO 3: ENVIAR DADOS NORMAIS
+    // Só envia para quem já digitou a senha correta (está na sala do UUID)
     io.to(data.uuid).emit('new-log', data);
     res.status(200).send('OK');
 });
 
+// ROTA DA FOTO DO AVATAR
 app.get('/api/avatar/:uuid', (req, res) => {
     const uuid = req.params.uuid;
     const url = `https://world.secondlife.com/resident/${uuid}`;
-    const options = { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36' } };
+    const options = { headers: { 'User-Agent': 'Mozilla/5.0' } };
 
-    https.get(url, options, (response) => {
-        let data = '';
-        response.on('data', chunk => data += chunk);
-        response.on('end', () => {
-            const match = data.match(/<img[^>]+src="([^"]+)"[^>]*class="parcelimg"/i) || data.match(/<img[^>]+class="parcelimg"[^>]*src="([^"]+)"/i);
-            if (match && match[1]) {
-                let imageUrl = match[1].startsWith('http://') ? match[1].replace('http://', 'https://') : match[1];
-                res.redirect(imageUrl);
-            } else {
-                res.redirect('https://secondlife.com/app/image/5748decc-f629-461c-9a36-a35a221fe21f/1');
-            }
+    https.get(url, options, (resp) => {
+        let d = '';
+        resp.on('data', c => d += c);
+        resp.on('end', () => {
+            const m = d.match(/<img[^>]+src="([^"]+)"[^>]*class="parcelimg"/i) || d.match(/<img[^>]+class="parcelimg"[^>]*src="([^"]+)"/i);
+            if (m && m[1]) res.redirect(m[1].startsWith('http://') ? m[1].replace('http://', 'https://') : m[1]);
+            else res.redirect('https://secondlife.com/app/image/5748decc-f629-461c-9a36-a35a221fe21f/1');
         });
     }).on('error', () => res.redirect('https://secondlife.com/app/image/5748decc-f629-461c-9a36-a35a221fe21f/1'));
 });
 
-// --- SISTEMA DE TRAVA DE DISPOSITIVO ---
+// --- SISTEMA DE LOGIN ---
 io.on('connection', (socket) => {
     
-    // O site manda: "Oi, sou o Avatar tal, com a senha do link tal, e meu ID de computador é esse"
-    socket.on('auth_device', ({ uuid, key, deviceId }) => {
-        
-        if (!uuid || !key || !deviceId) {
-            socket.emit('auth_failed', 'Invalid Credentials');
-            return;
-        }
+    // O site manda: "Quero entrar no painel do UUID tal com a senha tal"
+    socket.on('login_attempt', ({ uuid, code }) => {
+        const trueCode = accessCodes[uuid];
 
-        const currentLock = sessionLocks[uuid];
-
-        // CENÁRIO 1: É um link NOVO (gerado agora no SL) ou primeira vez acessando
-        // Ação: Registramos esse computador como o DONO deste link.
-        if (!currentLock || currentLock.key !== key) {
-            sessionLocks[uuid] = { key: key, deviceId: deviceId };
-            socket.join(uuid); // Entra na sala segura
-            socket.emit('auth_success');
-            return;
-        }
-
-        // CENÁRIO 2: O link já existe. Verificamos se é o MESMO computador.
-        if (currentLock.key === key) {
-            if (currentLock.deviceId === deviceId) {
-                // É o dono voltando (reload da página). Pode entrar.
-                socket.join(uuid);
-                socket.emit('auth_success');
-            } else {
-                // É OUTRA PESSOA tentando usar o mesmo link.
-                // Ação: BLOQUEAR.
-                socket.emit('auth_failed', 'Link already in use on another device.');
-            }
+        if (trueCode && code === trueCode) {
+            socket.join(uuid); // SENHA CORRETA: Entra na sala
+            socket.emit('login_success');
+        } else {
+            socket.emit('login_failed'); // SENHA ERRADA
         }
     });
 });
 
 const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-    console.log(`Servidor rodando na porta ${PORT}`);
-});
+server.listen(PORT, () => { console.log(`Rodando na ${PORT}`); });
