@@ -10,12 +10,11 @@
         #logs { margin-top: 20px; }
         .entry { 
             border-bottom: 1px solid #222; 
-            padding: 8px 0; 
+            padding: 5px 0; 
             animation: flash 1s; 
             white-space: pre-wrap; 
         }
         @keyframes flash { from { background-color: #222; } to { background-color: transparent; } }
-        .timestamp { color: #666; font-size: 0.8em; margin-right: 10px; }
     </style>
 </head>
 <body>
@@ -38,13 +37,10 @@
             const div = document.createElement('div');
             div.className = 'entry';
             
-            // Pega a hora atual
-            const time = new Date().toLocaleTimeString();
-            
-            // Verifica se veio texto puro ou objeto
+            // Aqui pegamos apenas o texto, sem adicionar hora/data
             const content = msg.text ? msg.text : JSON.stringify(msg);
             
-            div.innerHTML = `<span class="timestamp">[${time}]</span> ${content}`;
+            div.textContent = content;
             
             // Adiciona no topo da lista
             logDiv.prepend(div);
